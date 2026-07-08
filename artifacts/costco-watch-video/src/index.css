@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+:root {
+  /* CostcoWatch brand palette */
+  --color-primary: #10b981;
+  --color-secondary: #059669;
+  --color-accent: #34d399;
+
+  --color-bg-light: #0d0f0e;
+  --color-bg-dark: #060807;
+  --color-bg-card: #111410;
+  --color-bg-muted: #181c1a;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
+  --color-text-inverse: #0d0f0e;
+
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-accent: var(--color-accent);
+  --color-bg-light: var(--color-bg-light);
+  --color-bg-dark: var(--color-bg-dark);
+  --color-bg-card: var(--color-bg-card);
+  --color-bg-muted: var(--color-bg-muted);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-inverse: var(--color-text-inverse);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--color-bg-light);
+}
+
+body {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utility classes used by scenes */
+.text-glow {
+  text-shadow: 0 0 40px rgba(16, 185, 129, 0.7), 0 0 80px rgba(16, 185, 129, 0.3);
+}
+
+.box-glow {
+  box-shadow: 0 0 40px rgba(16, 185, 129, 0.12), 0 0 80px rgba(16, 185, 129, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.border-gradient {
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}

@@ -1,0 +1,27 @@
+kind = "video"
+previewPath = "/costco-watch-video/"
+title = "CostcoWatch — Explainer Video"
+version = "1.0.0"
+id = "artifacts/costco-watch-video"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/costco-watch-video/" ]
+localPort = 21312
+
+[services.development]
+run = "pnpm --filter @workspace/costco-watch-video run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/costco-watch-video", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/costco-watch-video/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21312"
+BASE_PATH = "/costco-watch-video/"
