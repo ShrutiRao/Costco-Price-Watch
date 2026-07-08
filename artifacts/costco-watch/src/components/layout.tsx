@@ -1,10 +1,38 @@
+import { useState, useEffect } from "react"
 import { Link, useLocation } from "wouter"
 import { Upload, FileText, LayoutDashboard } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CostcoWatchLogo } from "@/components/logo"
+import { useGetDashboardSummary } from "@workspace/api-client-react"
+
+/** Formats a ms timestamp as a human-friendly relative string, e.g. "just now", "2 min ago". */
+function useRelativeTime(ms: number | undefined): string {
+  const [label, setLabel] = useState<string>(() => formatRelative(ms))
+
+  useEffect(() => {
+    setLabel(formatRelative(ms))
+    const id = setInterval(() => setLabel(formatRelative(ms)), 30_000)
+    return () => clearInterval(id)
+  }, [ms])
+
+  return label
+}
+
+function formatRelative(ms: number | undefined): string {
+  if (!ms) return "—"
+  const diff = Math.floor((Date.now() - ms) / 1000)
+  if (diff < 10) return "just now"
+  if (diff < 60) return `${diff}s ago`
+  const mins = Math.floor(diff / 60)
+  if (mins < 60) return `${mins} min ago`
+  const hrs = Math.floor(mins / 60)
+  return `${hrs}h ago`
+}
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation()
+  const { dataUpdatedAt } = useGetDashboardSummary()
+  const lastChecked = useRelativeTime(dataUpdatedAt || undefined)
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -53,16 +81,24 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="p-4 mt-auto">
-          <div className="rounded-xl border border-border/40 bg-white/[0.03] px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2">
+          <div className="rounded-xl border border-border/40 bg-white/[0.03] px-4 py-3 space-y-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
               Status
             </p>
             <div className="flex items-center gap-2.5">
-              <span className="relative flex h-2 w-2">
+              <span className="relative flex h-2 w-2 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
               <span className="text-sm font-medium text-foreground/80">Monitoring Active</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground/50 font-mono uppercase tracking-wider">
+                Last check
+              </span>
+              <span className="text-[10px] text-muted-foreground/70 font-mono tabular-nums">
+                {lastChecked}
+              </span>
             </div>
           </div>
         </div>
