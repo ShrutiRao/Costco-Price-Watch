@@ -3,13 +3,20 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: CostcoWatch API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: receipts
+    description: Receipt management and processing
+  - name: policies
+    description: Costco price-adjustment policy knowledge base
+  - name: dashboard
+    description: Dashboard summary aggregates
+
 paths:
   /healthz:
     get:
@@ -24,6 +31,142 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /receipts:
+    get:
+      operationId: listReceipts
+      tags: [receipts]
+      summary: List all uploaded receipts
+      responses:
+        "200":
+          description: List of receipts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Receipt"
+    post:
+      operationId: uploadReceipt
+      tags: [receipts]
+      summary: Upload a receipt image or PDF for processing
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ReceiptUpload"
+      responses:
+        "201":
+          description: Receipt uploaded and processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /receipts/{receiptId}:
+    get:
+      operationId: getReceipt
+      tags: [receipts]
+      summary: Get receipt details with extracted line items
+      parameters:
+        - name: receiptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Receipt with extracted items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiptDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteReceipt
+      tags: [receipts]
+      summary: Delete a receipt
+      parameters:
+        - name: receiptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /receipts/{receiptId}/comparison:
+    get:
+      operationId: getReceiptComparison
+      tags: [receipts]
+      summary: Get price comparison and verdict for each item on a receipt
+      parameters:
+        - name: receiptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Price comparison results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiptComparison"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /policies:
+    get:
+      operationId: listPolicies
+      tags: [policies]
+      summary: List all Costco price-adjustment policy rules
+      responses:
+        "200":
+          description: Policy rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PolicyRule"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary statistics
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +177,234 @@ components:
       required:
         - status
 
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    ReceiptUpload:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+      required:
+        - file
+
+    Receipt:
+      type: object
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+        warehouse:
+          type: string
+        purchaseDate:
+          type: string
+        memberNumber:
+          type: ["string", "null"]
+        itemCount:
+          type: integer
+        totalAmount:
+          type: number
+        alertCount:
+          type: integer
+        reviewCount:
+          type: integer
+        estimatedRefund:
+          type: number
+        status:
+          type: string
+          enum: [processing, ready, error]
+      required:
+        - id
+        - filename
+        - uploadedAt
+        - warehouse
+        - purchaseDate
+        - memberNumber
+        - itemCount
+        - totalAmount
+        - alertCount
+        - reviewCount
+        - estimatedRefund
+        - status
+
+    ReceiptItem:
+      type: object
+      properties:
+        id:
+          type: string
+        itemNumber:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        quantity:
+          type: integer
+        purchasePrice:
+          type: number
+        currentPrice:
+          type: number
+        priceDrop:
+          type: number
+        percentDrop:
+          type: number
+        verdict:
+          type: string
+          enum: [alert, no_action, review]
+        policyRuleId:
+          type: ["string", "null"]
+        policyRuleTitle:
+          type: ["string", "null"]
+        evidenceSnippet:
+          type: ["string", "null"]
+        withinPolicyWindow:
+          type: boolean
+        daysUntilExpiry:
+          type: ["integer", "null"]
+      required:
+        - id
+        - itemNumber
+        - name
+        - category
+        - quantity
+        - purchasePrice
+        - currentPrice
+        - priceDrop
+        - percentDrop
+        - verdict
+        - policyRuleId
+        - policyRuleTitle
+        - evidenceSnippet
+        - withinPolicyWindow
+        - daysUntilExpiry
+
+    ReceiptDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+        warehouse:
+          type: string
+        purchaseDate:
+          type: string
+        memberNumber:
+          type: ["string", "null"]
+        totalAmount:
+          type: number
+        status:
+          type: string
+          enum: [processing, ready, error]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReceiptItem"
+      required:
+        - id
+        - filename
+        - uploadedAt
+        - warehouse
+        - purchaseDate
+        - memberNumber
+        - totalAmount
+        - status
+        - items
+
+    ReceiptComparison:
+      type: object
+      properties:
+        receiptId:
+          type: string
+        alertCount:
+          type: integer
+        reviewCount:
+          type: integer
+        noActionCount:
+          type: integer
+        estimatedRefund:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReceiptItem"
+      required:
+        - receiptId
+        - alertCount
+        - reviewCount
+        - noActionCount
+        - estimatedRefund
+        - items
+
+    PolicyRule:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        conditions:
+          type: array
+          items:
+            type: string
+        exclusions:
+          type: array
+          items:
+            type: string
+        windowDays:
+          type: ["integer", "null"]
+        category:
+          type: string
+      required:
+        - id
+        - title
+        - description
+        - conditions
+        - exclusions
+        - windowDays
+        - category
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalReceipts:
+          type: integer
+        totalItemsScanned:
+          type: integer
+        totalAlerts:
+          type: integer
+        totalReviews:
+          type: integer
+        estimatedTotalSavings:
+          type: number
+        avgDropPercent:
+          type: number
+        lastScannedAt:
+          type: ["string", "null"]
+          format: date-time
+        topAlertItem:
+          type: ["string", "null"]
+      required:
+        - totalReceipts
+        - totalItemsScanned
+        - totalAlerts
+        - totalReviews
+        - estimatedTotalSavings
+        - avgDropPercent
+        - lastScannedAt
+        - topAlertItem

@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "CostcoWatch"
+version = "1.0.0"
+id = "artifacts/costco-watch"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23299
+
+[services.development]
+run = "pnpm --filter @workspace/costco-watch run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/costco-watch", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/costco-watch/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23299"
+BASE_PATH = "/"
