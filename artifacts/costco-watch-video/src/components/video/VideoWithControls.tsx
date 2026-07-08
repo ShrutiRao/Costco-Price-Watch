@@ -151,7 +151,7 @@ export default function VideoWithControls() {
     durations, activeDuration, onSceneChange, jumpTo, toggleLock,
   } = useSceneControls(SCENE_DURATIONS);
 
-  const [muted, setMuted] = useState(true);
+  const [muted, setMuted] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [tapPinned, setTapPinned] = useState(false);

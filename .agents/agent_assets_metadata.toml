@@ -6,3 +6,9 @@ id = "haEsFd8qdSTRjVOefvUf0"
 uri = "file://artifacts/costco-watch-video/public/audio/bg_music.mp3"
 type = "audio"
 title = "background music"
+
+[[outputs]]
+id = "qJ0qpsUnVO1phl8jpaxw1"
+uri = "file://.local/outputs/Costco-Price-Watch.pptx"
+type = "slides"
+title = "Costco Price Watch.pptx"
