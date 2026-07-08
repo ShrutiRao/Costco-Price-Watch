@@ -1,16 +1,31 @@
-import { useListReceipts } from "@workspace/api-client-react"
+import { useListReceipts, useDeleteReceipt, getListReceiptsQueryKey } from "@workspace/api-client-react"
+import { useQueryClient } from "@tanstack/react-query"
 import { AppLayout } from "@/components/layout"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { FileText, Plus, ChevronRight } from "lucide-react"
+import { FileText, Plus, ChevronRight, Trash2 } from "lucide-react"
 import { Link } from "wouter"
 import { formatCurrency, formatDate } from "@/lib/utils"
 
 export default function ReceiptsList() {
   const { data: receipts, isLoading } = useListReceipts()
+  const queryClient = useQueryClient()
+  const deleteMutation = useDeleteReceipt({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListReceiptsQueryKey() })
+      },
+    },
+  })
+
+  const handleDelete = (receiptId: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    deleteMutation.mutate({ receiptId })
+  }
 
   return (
     <AppLayout>
@@ -46,14 +61,14 @@ export default function ReceiptsList() {
                   <TableHead className="text-right">Total Amount</TableHead>
                   <TableHead className="text-right">Est. Refund</TableHead>
                   <TableHead>Verdicts</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {receipts.map(receipt => (
-                  <TableRow 
-                    key={receipt.id} 
-                    className="group cursor-pointer"
+                  <TableRow
+                    key={receipt.id}
+                    className="group relative cursor-pointer"
                     data-testid={`row-receipt-${receipt.id}`}
                   >
                     <TableCell className="font-medium">
@@ -88,11 +103,25 @@ export default function ReceiptsList() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
+                      {/* Navigation link covers the whole row beneath the action buttons */}
                       <Link href={`/receipts/${receipt.id}`} className="absolute inset-0">
                         <span className="sr-only">View Receipt</span>
                       </Link>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
+                      <div className="relative z-10 flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => handleDelete(receipt.id, e)}
+                          disabled={deleteMutation.isPending}
+                          data-testid={`btn-delete-receipt-${receipt.id}`}
+                          aria-label="Delete receipt"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
