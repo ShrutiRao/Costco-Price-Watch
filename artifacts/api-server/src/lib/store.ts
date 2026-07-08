@@ -502,11 +502,63 @@ export function extractReceiptFromUpload(
 
 // ─── Seed with a sample receipt so the dashboard is never empty ───────────────
 const SEED_FILENAME = "Costco_Receipt_June2025.pdf";
+const SEED_RECEIPT_ID = "seed-receipt-costco-june-2025";
 
 export async function seedIfEmpty(): Promise<void> {
-  const existing = await db.select({ id: receiptsTable.id }).from(receiptsTable).limit(1);
-  if (existing.length === 0) {
-    const seed = extractReceiptFromUpload(SEED_FILENAME);
-    await addReceipt(seed);
+  // Generate a deterministic seed receipt with a stable purchase date so
+  // item IDs derived below are always the same across restarts.
+  const seed = extractReceiptFromUpload(SEED_FILENAME, "2025-06-15");
+
+  // Override with a stable ID — ON CONFLICT DO NOTHING makes this safe for
+  // concurrent server startups (rolling deploys, two workers racing, etc.).
+  seed.id = SEED_RECEIPT_ID;
+
+  const inserted = await db
+    .insert(receiptsTable)
+    .values({
+      id: seed.id,
+      filename: seed.filename,
+      uploadedAt: seed.uploadedAt,
+      warehouse: seed.warehouse,
+      purchaseDate: seed.purchaseDate,
+      memberNumber: seed.memberNumber,
+      totalAmount: seed.totalAmount,
+      status: seed.status,
+      alertCount: seed.alertCount,
+      reviewCount: seed.reviewCount,
+      estimatedRefund: seed.estimatedRefund,
+      itemCount: seed.itemCount,
+    })
+    .onConflictDoNothing()
+    .returning({ id: receiptsTable.id });
+
+  // Only insert items when the receipt row was freshly created; if the
+  // receipt already existed, items are already present.
+  if (inserted.length > 0 && seed.items.length > 0) {
+    await db
+      .insert(receiptItemsTable)
+      .values(
+        seed.items.map((item, idx) => ({
+          // Stable item IDs derived from the seed receipt ID + position so
+          // a second concurrent attempt also hits ON CONFLICT DO NOTHING.
+          id: `${SEED_RECEIPT_ID}-item-${idx}`,
+          receiptId: seed.id,
+          itemNumber: item.itemNumber,
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          purchasePrice: item.purchasePrice,
+          currentPrice: item.currentPrice,
+          priceDrop: item.priceDrop,
+          percentDrop: item.percentDrop,
+          verdict: item.verdict,
+          policyRuleId: item.policyRuleId,
+          policyRuleTitle: item.policyRuleTitle,
+          evidenceSnippet: item.evidenceSnippet,
+          withinPolicyWindow: item.withinPolicyWindow,
+          daysUntilExpiry: item.daysUntilExpiry,
+        })),
+      )
+      .onConflictDoNothing();
   }
 }
