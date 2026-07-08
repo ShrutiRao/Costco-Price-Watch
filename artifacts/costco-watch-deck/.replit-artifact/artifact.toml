@@ -1,0 +1,27 @@
+kind = "slides"
+previewPath = "/costco-watch-deck/"
+title = "CostcoWatch Deck"
+version = "1.0.0"
+id = "artifacts/costco-watch-deck"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/costco-watch-deck/" ]
+localPort = 21505
+
+[services.development]
+run = "pnpm --filter @workspace/costco-watch-deck run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/costco-watch-deck", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/costco-watch-deck/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21505"
+BASE_PATH = "/costco-watch-deck/"
