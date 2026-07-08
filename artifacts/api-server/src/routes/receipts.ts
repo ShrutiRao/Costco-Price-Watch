@@ -21,7 +21,7 @@ const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 router.get("/receipts", async (_req, res): Promise<void> => {
-  const all = getReceipts();
+  const all = await getReceipts();
   res.json(ListReceiptsResponse.parse(all));
 });
 
@@ -32,7 +32,7 @@ router.post("/receipts", upload.single("file"), async (req, res): Promise<void> 
   }
 
   const receipt = extractReceiptFromUpload(req.file.originalname);
-  addReceipt(receipt);
+  await addReceipt(receipt);
 
   res.status(201).json(UploadReceiptResponse.parse(receipt));
 });
@@ -44,7 +44,7 @@ router.get("/receipts/:receiptId", async (req, res): Promise<void> => {
     return;
   }
 
-  const receipt = getReceiptById(params.data.receiptId);
+  const receipt = await getReceiptById(params.data.receiptId);
   if (!receipt) {
     res.status(404).json({ error: "Receipt not found" });
     return;
@@ -60,7 +60,7 @@ router.delete("/receipts/:receiptId", async (req, res): Promise<void> => {
     return;
   }
 
-  const deleted = deleteReceipt(params.data.receiptId);
+  const deleted = await deleteReceipt(params.data.receiptId);
   if (!deleted) {
     res.status(404).json({ error: "Receipt not found" });
     return;
@@ -76,7 +76,7 @@ router.get("/receipts/:receiptId/comparison", async (req, res): Promise<void> =>
     return;
   }
 
-  const receipt = getReceiptById(params.data.receiptId);
+  const receipt = await getReceiptById(params.data.receiptId);
   if (!receipt) {
     res.status(404).json({ error: "Receipt not found" });
     return;

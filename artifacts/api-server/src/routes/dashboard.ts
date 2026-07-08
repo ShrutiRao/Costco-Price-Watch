@@ -5,7 +5,7 @@ import { getReceipts } from "../lib/store";
 const router: IRouter = Router();
 
 router.get("/dashboard/summary", async (_req, res): Promise<void> => {
-  const receipts = getReceipts();
+  const receipts = await getReceipts();
 
   const totalReceipts = receipts.length;
   const allItems = receipts.flatMap((r) => r.items);

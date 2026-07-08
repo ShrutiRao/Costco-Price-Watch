@@ -1,4 +1,6 @@
 import { randomUUID } from "crypto";
+import { desc, eq, inArray } from "drizzle-orm";
+import { db, receiptsTable, receiptItemsTable } from "@workspace/db";
 
 export type Verdict = "alert" | "no_action" | "review";
 
@@ -46,25 +48,134 @@ export interface PolicyRule {
   category: string;
 }
 
-// ─── In-memory store ──────────────────────────────────────────────────────────
-const receipts = new Map<string, ReceiptDetail>();
+// ─── DB helpers ───────────────────────────────────────────────────────────────
 
-export function getReceipts(): ReceiptDetail[] {
-  return Array.from(receipts.values()).sort(
-    (a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime(),
-  );
+async function rowsToDetail(
+  receiptRows: (typeof receiptsTable.$inferSelect)[],
+): Promise<ReceiptDetail[]> {
+  if (receiptRows.length === 0) return [];
+
+  const ids = receiptRows.map((r) => r.id);
+  // Fetch all items for these receipts in one query
+  const allItems = await db
+    .select()
+    .from(receiptItemsTable)
+    .where(inArray(receiptItemsTable.receiptId, ids));
+
+  const itemsByReceipt = new Map<string, ReceiptItem[]>();
+  for (const item of allItems) {
+    const list = itemsByReceipt.get(item.receiptId) ?? [];
+    list.push(dbItemToReceiptItem(item));
+    itemsByReceipt.set(item.receiptId, list);
+  }
+
+  return receiptRows.map((r) => ({
+    id: r.id,
+    filename: r.filename,
+    uploadedAt: r.uploadedAt,
+    warehouse: r.warehouse,
+    purchaseDate: r.purchaseDate,
+    memberNumber: r.memberNumber,
+    totalAmount: r.totalAmount,
+    status: r.status as ReceiptDetail["status"],
+    alertCount: r.alertCount,
+    reviewCount: r.reviewCount,
+    estimatedRefund: r.estimatedRefund,
+    itemCount: r.itemCount,
+    items: itemsByReceipt.get(r.id) ?? [],
+  }));
 }
 
-export function getReceiptById(id: string): ReceiptDetail | undefined {
-  return receipts.get(id);
+function dbItemToReceiptItem(
+  row: typeof receiptItemsTable.$inferSelect,
+): ReceiptItem {
+  return {
+    id: row.id,
+    itemNumber: row.itemNumber,
+    name: row.name,
+    category: row.category,
+    quantity: row.quantity,
+    purchasePrice: row.purchasePrice,
+    currentPrice: row.currentPrice,
+    priceDrop: row.priceDrop,
+    percentDrop: row.percentDrop,
+    verdict: row.verdict as Verdict,
+    policyRuleId: row.policyRuleId,
+    policyRuleTitle: row.policyRuleTitle,
+    evidenceSnippet: row.evidenceSnippet,
+    withinPolicyWindow: row.withinPolicyWindow,
+    daysUntilExpiry: row.daysUntilExpiry,
+  };
 }
 
-export function addReceipt(receipt: ReceiptDetail): void {
-  receipts.set(receipt.id, receipt);
+// ─── Public store API (async) ─────────────────────────────────────────────────
+
+export async function getReceipts(): Promise<ReceiptDetail[]> {
+  const rows = await db
+    .select()
+    .from(receiptsTable)
+    .orderBy(desc(receiptsTable.uploadedAt));
+  return rowsToDetail(rows);
 }
 
-export function deleteReceipt(id: string): boolean {
-  return receipts.delete(id);
+export async function getReceiptById(
+  id: string,
+): Promise<ReceiptDetail | undefined> {
+  const rows = await db
+    .select()
+    .from(receiptsTable)
+    .where(eq(receiptsTable.id, id));
+  if (rows.length === 0) return undefined;
+  const details = await rowsToDetail(rows);
+  return details[0];
+}
+
+export async function addReceipt(receipt: ReceiptDetail): Promise<void> {
+  await db.insert(receiptsTable).values({
+    id: receipt.id,
+    filename: receipt.filename,
+    uploadedAt: receipt.uploadedAt,
+    warehouse: receipt.warehouse,
+    purchaseDate: receipt.purchaseDate,
+    memberNumber: receipt.memberNumber,
+    totalAmount: receipt.totalAmount,
+    status: receipt.status,
+    alertCount: receipt.alertCount,
+    reviewCount: receipt.reviewCount,
+    estimatedRefund: receipt.estimatedRefund,
+    itemCount: receipt.itemCount,
+  });
+
+  if (receipt.items.length > 0) {
+    await db.insert(receiptItemsTable).values(
+      receipt.items.map((item) => ({
+        id: item.id,
+        receiptId: receipt.id,
+        itemNumber: item.itemNumber,
+        name: item.name,
+        category: item.category,
+        quantity: item.quantity,
+        purchasePrice: item.purchasePrice,
+        currentPrice: item.currentPrice,
+        priceDrop: item.priceDrop,
+        percentDrop: item.percentDrop,
+        verdict: item.verdict,
+        policyRuleId: item.policyRuleId,
+        policyRuleTitle: item.policyRuleTitle,
+        evidenceSnippet: item.evidenceSnippet,
+        withinPolicyWindow: item.withinPolicyWindow,
+        daysUntilExpiry: item.daysUntilExpiry,
+      })),
+    );
+  }
+}
+
+export async function deleteReceipt(id: string): Promise<boolean> {
+  const result = await db
+    .delete(receiptsTable)
+    .where(eq(receiptsTable.id, id))
+    .returning({ id: receiptsTable.id });
+  return result.length > 0;
 }
 
 // ─── Policy knowledge base ────────────────────────────────────────────────────
@@ -390,5 +501,12 @@ export function extractReceiptFromUpload(
 }
 
 // ─── Seed with a sample receipt so the dashboard is never empty ───────────────
-const seed = extractReceiptFromUpload("Costco_Receipt_June2025.pdf");
-addReceipt(seed);
+const SEED_FILENAME = "Costco_Receipt_June2025.pdf";
+
+export async function seedIfEmpty(): Promise<void> {
+  const existing = await db.select({ id: receiptsTable.id }).from(receiptsTable).limit(1);
+  if (existing.length === 0) {
+    const seed = extractReceiptFromUpload(SEED_FILENAME);
+    await addReceipt(seed);
+  }
+}
