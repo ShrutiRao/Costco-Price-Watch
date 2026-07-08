@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter"
 import { Upload, FileText, LayoutDashboard } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { CostcoWatchLogo } from "@/components/logo"
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation()
@@ -17,13 +18,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <aside className="w-64 border-r border-border/40 bg-card/20 flex flex-col hidden md:flex shrink-0">
 
         {/* Logo */}
-        <Link href="/" className="block px-4 pt-5 pb-4 group">
-          <img
-            src="/logo.png"
-            alt="CostcoWatch"
-            className="w-[130px] h-auto object-contain transition-opacity duration-200 group-hover:opacity-90"
-            draggable={false}
-          />
+        <Link href="/" className="block px-5 pt-5 pb-4 group">
+          <CostcoWatchLogo className="w-[148px] h-auto transition-opacity duration-200 group-hover:opacity-80" />
         </Link>
 
         <div className="mx-5 mb-4 h-px bg-border/40" />

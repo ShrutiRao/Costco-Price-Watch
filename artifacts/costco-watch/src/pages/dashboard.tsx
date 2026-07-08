@@ -1,12 +1,14 @@
 import { useGetDashboardSummary, useListReceipts } from "@workspace/api-client-react"
 import { AppLayout } from "@/components/layout"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FileText, ArrowRight, TrendingDown, Search, AlertTriangle, Package } from "lucide-react"
 import { Link } from "wouter"
 import { cn, formatCurrency, formatDate } from "@/lib/utils"
+import type { LucideIcon } from "lucide-react"
+import type { Receipt } from "@workspace/api-client-react"
 
 export default function Dashboard() {
   const { data: summary, isLoading: isSummaryLoading } = useGetDashboardSummary()
@@ -17,61 +19,73 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-10 pb-24 md:pb-10">
-        
-        {/* Hero Section */}
-        <section className="space-y-4">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-            Never miss a <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600">Costco price drop.</span>
+
+        {/* Hero Section — weight rhythm: light lead-in + bold climax */}
+        <section className="space-y-4 pt-2">
+          <h1 className="text-4xl md:text-5xl tracking-tight text-foreground leading-tight">
+            <span className="font-light text-foreground/80">Never miss a </span>
+            <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-500">
+              Costco price drop.
+            </span>
           </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl leading-relaxed">
+          <p className="text-base text-muted-foreground max-w-xl leading-relaxed">
             Upload your receipt, track your purchase, and get evidence-backed alerts when a better price appears.
           </p>
-          <div className="pt-4 flex gap-4">
+          <div className="pt-2 flex gap-4">
             <Link href="/upload">
-              <Button size="lg" className="h-12 px-6 text-base font-semibold shadow-[0_0_20px_rgba(16,185,129,0.2)]" data-testid="button-upload-hero">
-                <FileText className="mr-2 h-5 w-5" />
+              <Button
+                size="lg"
+                className="h-11 px-6 text-sm font-semibold shadow-[0_0_24px_rgba(16,185,129,0.25)] hover:shadow-[0_0_32px_rgba(16,185,129,0.35)] transition-shadow"
+                data-testid="button-upload-hero"
+              >
+                <FileText className="mr-2 h-4 w-4" />
                 Upload Receipt
               </Button>
             </Link>
           </div>
         </section>
 
-        {/* Stats Row */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          <StatCard 
-            title="Total Receipts" 
-            value={summary?.totalReceipts} 
-            icon={FileText} 
-            isLoading={isSummaryLoading} 
+        {/* Stats Row — large numbers, tiny-caps labels */}
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <StatCard
+            title="Total Receipts"
+            value={summary?.totalReceipts}
+            icon={FileText}
+            isLoading={isSummaryLoading}
           />
-          <StatCard 
-            title="Items Scanned" 
-            value={summary?.totalItemsScanned} 
-            icon={Package} 
-            isLoading={isSummaryLoading} 
+          <StatCard
+            title="Items Scanned"
+            value={summary?.totalItemsScanned}
+            icon={Package}
+            isLoading={isSummaryLoading}
           />
-          <StatCard 
-            title="Total Alerts" 
-            value={summary?.totalAlerts} 
-            icon={AlertTriangle} 
-            isLoading={isSummaryLoading} 
-            valueClass="text-emerald-500"
+          <StatCard
+            title="Total Alerts"
+            value={summary?.totalAlerts}
+            icon={AlertTriangle}
+            isLoading={isSummaryLoading}
+            valueClass="text-emerald-400"
           />
-          <StatCard 
-            title="Est. Savings" 
-            value={summary?.estimatedTotalSavings !== undefined ? formatCurrency(summary.estimatedTotalSavings) : undefined} 
-            icon={TrendingDown} 
-            isLoading={isSummaryLoading} 
+          <StatCard
+            title="Est. Savings"
+            value={
+              summary?.estimatedTotalSavings !== undefined
+                ? formatCurrency(summary.estimatedTotalSavings)
+                : undefined
+            }
+            icon={TrendingDown}
+            isLoading={isSummaryLoading}
+            valueClass="text-emerald-400"
           />
         </section>
 
         {/* Recent Activity */}
-        <section className="space-y-6">
+        <section className="space-y-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold tracking-tight">Recent Receipts</h2>
+            <h2 className="text-xl font-semibold tracking-tight">Recent Receipts</h2>
             <Link href="/receipts">
-              <Button variant="ghost" className="gap-2" data-testid="link-view-all-receipts">
-                View all <ArrowRight className="h-4 w-4" />
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground" data-testid="link-view-all-receipts">
+                View all <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Link>
           </div>
@@ -79,46 +93,13 @@ export default function Dashboard() {
           {isReceiptsLoading ? (
             <div className="grid gap-4 md:grid-cols-3">
               {[1, 2, 3].map(i => (
-                <Skeleton key={i} className="h-[200px] rounded-xl" />
+                <Skeleton key={i} className="h-[160px] rounded-xl" />
               ))}
             </div>
           ) : recentReceipts.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-3">
               {recentReceipts.map(receipt => (
-                <Link key={receipt.id} href={`/receipts/${receipt.id}`}>
-                  <Card className="hover-elevate cursor-pointer transition-all duration-300 hover:border-primary/50 group h-full flex flex-col" data-testid={`card-receipt-${receipt.id}`}>
-                    <CardHeader className="pb-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">{receipt.warehouse}</CardTitle>
-                          <CardDescription className="font-mono mt-1 text-xs">
-                            {formatDate(receipt.purchaseDate)}
-                          </CardDescription>
-                        </div>
-                        <div className="font-mono font-medium">{formatCurrency(receipt.totalAmount)}</div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="mt-auto">
-                      <div className="pt-4 border-t border-border/50 flex flex-wrap gap-2">
-                        {receipt.alertCount > 0 && (
-                          <Badge variant="alert" className="font-mono text-xs shadow-none">
-                            {receipt.alertCount} Alert{receipt.alertCount !== 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                        {receipt.reviewCount > 0 && (
-                          <Badge variant="review" className="font-mono text-xs shadow-none">
-                            {receipt.reviewCount} Review{receipt.reviewCount !== 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                        {receipt.alertCount === 0 && receipt.reviewCount === 0 && (
-                          <Badge variant="no_action" className="font-mono text-xs shadow-none">
-                            No Action
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <ReceiptCard key={receipt.id} receipt={receipt} />
               ))}
             </div>
           ) : (
@@ -129,7 +110,9 @@ export default function Dashboard() {
                 </div>
                 <div className="space-y-2 max-w-sm">
                   <h3 className="font-semibold text-lg">No receipts yet</h3>
-                  <p className="text-sm text-muted-foreground">Upload your first Costco receipt to start tracking price drops and saving money.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Upload your first Costco receipt to start tracking price drops.
+                  </p>
                 </div>
                 <Link href="/upload">
                   <Button variant="outline" className="mt-4" data-testid="button-empty-upload">
@@ -140,30 +123,91 @@ export default function Dashboard() {
             </Card>
           )}
         </section>
-
       </div>
     </AppLayout>
   )
 }
 
-function StatCard({ title, value, icon: Icon, isLoading, valueClass }: { title: string, value?: string | number, icon: any, isLoading: boolean, valueClass?: string }) {
+/* ── Stat Card — large number with tiny-caps label ── */
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  isLoading,
+  valueClass,
+}: {
+  title: string
+  value?: string | number
+  icon: LucideIcon
+  isLoading: boolean
+  valueClass?: string
+}) {
   return (
-    <Card className="bg-card/50">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+    <Card className="bg-card/40 border-border/40 overflow-hidden relative">
+      {/* subtle icon watermark */}
+      <Icon className="absolute right-3 top-3 h-4 w-4 text-muted-foreground/20" />
+      <CardContent className="pt-5 pb-5 px-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/60 mb-2">
           {title}
-        </CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground/50" />
-      </CardHeader>
-      <CardContent>
+        </p>
         {isLoading ? (
-          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-9 w-20 mt-1" />
         ) : (
-          <div className={cn("text-2xl font-bold font-mono tracking-tight", valueClass)}>
+          <p className={cn("text-3xl md:text-4xl font-bold font-mono tabular-nums tracking-tight", valueClass)}>
             {value ?? 0}
-          </div>
+          </p>
         )}
       </CardContent>
     </Card>
+  )
+}
+
+/* ── Receipt Card — left accent border signals action priority ── */
+function ReceiptCard({ receipt }: { receipt: Receipt }) {
+  const accentClass =
+    receipt.alertCount > 0
+      ? "border-l-[3px] border-l-emerald-500"
+      : receipt.reviewCount > 0
+        ? "border-l-[3px] border-l-amber-500"
+        : "border-l-[3px] border-l-border/30"
+
+  return (
+    <Link href={`/receipts/${receipt.id}`}>
+      <Card
+        className={cn(
+          "cursor-pointer transition-all duration-200 hover:bg-card/80 hover:border-border/70 group h-full flex flex-col rounded-xl",
+          accentClass
+        )}
+        data-testid={`card-receipt-${receipt.id}`}
+      >
+        <CardContent className="pt-5 pb-5 px-5 flex flex-col h-full">
+          <div className="flex justify-between items-start gap-2 mb-3">
+            <div className="min-w-0">
+              <p className="font-semibold text-sm leading-snug truncate">{receipt.warehouse}</p>
+              <p className="text-xs text-muted-foreground font-mono mt-0.5">{formatDate(receipt.purchaseDate)}</p>
+            </div>
+            <p className="font-mono font-medium text-sm shrink-0 tabular-nums">{formatCurrency(receipt.totalAmount)}</p>
+          </div>
+
+          <div className="mt-auto pt-3 border-t border-border/40 flex flex-wrap gap-1.5">
+            {receipt.alertCount > 0 && (
+              <Badge variant="alert" className="font-mono text-[10px] shadow-none">
+                {receipt.alertCount} Alert{receipt.alertCount !== 1 ? "s" : ""}
+              </Badge>
+            )}
+            {receipt.reviewCount > 0 && (
+              <Badge variant="review" className="font-mono text-[10px] shadow-none">
+                {receipt.reviewCount} Review{receipt.reviewCount !== 1 ? "s" : ""}
+              </Badge>
+            )}
+            {receipt.alertCount === 0 && receipt.reviewCount === 0 && (
+              <Badge variant="no_action" className="font-mono text-[10px] shadow-none">
+                No Action
+              </Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   )
 }
